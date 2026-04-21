@@ -623,7 +623,8 @@ document.querySelectorAll('.svc-card').forEach(card => {
   scene.add(sun);
 
   // ── STARS ──
-  const STAR_CNT = 22000;
+  // Reduce particle count on low-end devices (devicePixelRatio ≤ 1 usually means a lower-tier screen)
+  const STAR_CNT = devicePixelRatio > 1 ? 14000 : 8000;
   const sPos = new Float32Array(STAR_CNT * 3);
   const sCol = new Float32Array(STAR_CNT * 3);
   for (let i = 0; i < STAR_CNT; i++) {
@@ -697,7 +698,7 @@ document.querySelectorAll('.svc-card').forEach(card => {
   const galaxyGroup = new THREE.Group();
   galaxyGroup.position.z = GALAXY_Z;
 
-  const G = 55000;
+  const G = devicePixelRatio > 1 ? 35000 : 20000;
   const gPos = new Float32Array(G * 3);
   const gCol = new Float32Array(G * 3);
   const cIn  = new THREE.Color(0xff6030);
@@ -875,16 +876,16 @@ document.querySelectorAll('.svc-card').forEach(card => {
     renderer.render(scene, camera);
   })();
 
+  let heroResizeTO = null;
   window.addEventListener('resize', () => {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+    clearTimeout(heroResizeTO);
+    heroResizeTO = setTimeout(() => {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }, 150);
   });
-})();
-
-/* ─────────────────────────────────────────────────
-   CONFETTI
 ───────────────────────────────────────────────── */
 function spawnConfetti() {
   const ov = document.getElementById('hero-overlay');
@@ -1036,7 +1037,7 @@ function spawnConfetti() {
    AUDIO — Web Audio API
 ───────────────────────────────────────────────── */
 let audioCtx = null;
-let bgHandle = null;
+let musicTimerHandle = null;
 let musicOn  = false;
 
 function getAudioCtx() {
@@ -1058,7 +1059,7 @@ function playTone(freq) {
 document.getElementById('musicBtn').addEventListener('click', () => {
   const ctx = getAudioCtx();
   if (musicOn) {
-    clearTimeout(bgHandle);
+    clearTimeout(musicTimerHandle);
     musicOn = false;
     document.getElementById('musicBtn').textContent = '🎵';
     return;
@@ -1078,7 +1079,7 @@ document.getElementById('musicBtn').addEventListener('click', () => {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
     osc.start(); osc.stop(ctx.currentTime + 0.35);
     ni++;
-    bgHandle = setTimeout(tick, 280);
+    musicTimerHandle = setTimeout(tick, 280);
   }
   tick();
 });
@@ -1445,9 +1446,9 @@ document.getElementById('musicBtn').addEventListener('click', () => {
   // Overlay particle background (Three.js)
   const oCanvas = document.getElementById('tov-canvas');
   const oScene  = new THREE.Scene();
-  const oCam    = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 500);
+  const oCam    = new THREE.PerspectiveCamera(70, oCanvas.clientWidth / oCanvas.clientHeight, 0.1, 500);
   const oRen    = new THREE.WebGLRenderer({ canvas: oCanvas, antialias:true, alpha:true });
-  oRen.setSize(innerWidth, innerHeight);
+  oRen.setSize(oCanvas.clientWidth, oCanvas.clientHeight);
   oRen.setClearColor(0x000000, 0);
   oCam.position.z = 35;
 
@@ -1474,9 +1475,14 @@ document.getElementById('musicBtn').addEventListener('click', () => {
     oPts.rotation.y += 0.002; oPts.rotation.x += 0.001;
     oRen.render(oScene, oCam);
   })();
+  let resizeTO = null;
   window.addEventListener('resize', () => {
-    oRen.setSize(innerWidth, innerHeight);
-    oCam.aspect = innerWidth / innerHeight; oCam.updateProjectionMatrix();
+    clearTimeout(resizeTO);
+    resizeTO = setTimeout(() => {
+      oRen.setSize(oCanvas.clientWidth, oCanvas.clientHeight);
+      oCam.aspect = oCanvas.clientWidth / oCanvas.clientHeight;
+      oCam.updateProjectionMatrix();
+    }, 150);
   });
 })();
 
